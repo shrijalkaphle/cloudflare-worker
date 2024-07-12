@@ -1,4 +1,5 @@
 import { connect } from "../../lib/mongodb";
+import dropboxService from "../services/dropbox.service";
 import { HonoContext } from "../types/main"
 
 
@@ -56,37 +57,12 @@ async function callback(ctx: HonoContext) {
 }
 
 async function refreshToken(ctx: HonoContext) {
+    
+    const response = await dropboxService.refreshAccessToken()
 
-    const { db } = await connect()
-
-    const user = await db?.collection('user').findOne({ email: 'kaphle.shrijal9@gmail.com' })
-    const previousRefreshToken = user.refreshToken
-
-    // refresh token here
-    const tokenUrl = 'https://api.dropboxapi.com/oauth2/token';
-    const body = new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: previousRefreshToken,
-        client_id: DROPBOX_APP_ID,
-        client_secret: DROPBOX_APP_SECERET
-    });
-
-    const response = await fetch(tokenUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            "X-Source": "Cloudflare-Workers",
-        },
-        body: body.toString(),
-    });
-
-    const tokenData: any = await response.json();
-    if (!tokenData.access_token) return ctx.json({ message: 'Access token not found', error: tokenData }, 400);
-    const accessToken = tokenData.access_token;
-
-    const updated = await db?.collection('user').updateOne({ email: 'kaphle.shrijal9@gmail.com' }, { $set: { accessToken } }, { upsert: true })
-    const updatedUser = await db?.collection('user').findOne({ email: 'kaphle.shrijal9@gmail.com' })
-    return ctx.json({ updatedUser, status: true }, 200)
+    if(response.error) return ctx.json({ message: "Something went wrong", error: response.error }, 400)
+    else 
+        return ctx.json({ updatedUser: response.updatedUser, status: true }, 200)
 
 }
 

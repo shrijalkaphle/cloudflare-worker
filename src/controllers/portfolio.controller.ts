@@ -1,6 +1,7 @@
 import { connect } from "../../lib/mongodb";
 import { HonoContext } from "../types/main";
 import * as Realm from 'realm-web';
+import dropboxService from "../services/dropbox.service";
 
 const ObjectId = Realm.BSON.ObjectID;
 
@@ -16,8 +17,12 @@ async function getAll(ctx: HonoContext) {
     const experience = await db?.collection('experience').find();
     const skills = await db?.collection('skills').find();
     const services = await db?.collection('services').find();
-    const projects = await db?.collection('projects').find();
-    response = { ...response, ...about, education, experience, skills, services, projects }
+
+    // profile picture url
+    await dropboxService.refreshAccessToken()
+    const proifle_picture = await dropboxService.generateTemporaryLink(about.profile_pic)
+    about.profile_pic = proifle_picture.link
+    response = { ...response, ...about, education, experience, skills, services }
 
     return ctx.json({
         portfolio: response,
